@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "196790250714",
-    "project_id": "elearning-raisa",
-    "storage_bucket": "elearning-raisa.appspot.com"
+    "project_number": "818010514395",
+    "project_id": "elearning-ziad",
+    "storage_bucket": "elearning-ziad.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:196790250714:android:8f0c8bc48a892b888a89e3",
+        "mobilesdk_app_id": "1:818010514395:android:f61e73e04fbe0c80163dfe",
         "android_client_info": {
           "package_name": "com.example.online_cource_app"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyCoHuLlxgH4-z6ykQFHZfH4wVg99B1y0Ww"
+          "current_key": "AIzaSyAjF9jA6a2HRIyWUKHAhbtjhrxGSCfZ72A"
         }
       ],
       "services": {

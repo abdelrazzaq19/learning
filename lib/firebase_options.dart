@@ -50,13 +50,12 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyCoHuLlxgH4-z6ykQFHZfH4wVg99B1y0Ww',
-    appId: '1:196790250714:android:8f0c8bc48a892b888a89e3',
-    messagingSenderId: '196790250714',
-    projectId: 'elearning-raisa',
-    storageBucket: 'elearning-raisa.appspot.com',
+    apiKey: 'AIzaSyAjF9jA6a2HRIyWUKHAhbtjhrxGSCfZ72A',
+    appId: '1:818010514395:android:f61e73e04fbe0c80163dfe',
+    messagingSenderId: '818010514395',
+    projectId: 'elearning-ziad',
+    storageBucket: 'elearning-ziad.firebasestorage.app',
   );
-
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyD8mZErbXqze_JRo1HcrscGkN0v5fS9lG4',
     appId: '1:196790250714:ios:8f45777ac43d6d188a89e3',
