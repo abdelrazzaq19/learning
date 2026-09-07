@@ -1,0 +1,27 @@
+# Native (OS-level) splash screen shown while the Flutter engine boots.
+#
+# Regenerate after changing this file:
+#   dart run flutter_native_splash:create
+#
+# Colours match AppTheme: backgroundColor / darkBackgroundColor.
+flutter_native_splash:
+  color: "#F5F9FC"
+  image: assets/logo.png
+
+  color_dark: "#121418"
+  image_dark: assets/logo.png
+
+  android_12:
+    # Android 12+ draws its own splash: a centred icon on a solid colour.
+    # The icon is masked to a circle, so the logo needs padding around it.
+    image: assets/splash_android12.png
+    color: "#F5F9FC"
+    image_dark: assets/splash_android12.png
+    color_dark: "#121418"
+
+  android: true
+  ios: true
+  web: false
+
+  # Full-screen (no status/nav bar) while the splash is up.
+  fullscreen: false

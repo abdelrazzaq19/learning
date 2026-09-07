@@ -4,14 +4,20 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 
-import 'package:online_cource_app/auth_gate.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
+
+import 'package:online_cource_app/Splash/splash_screen.dart';
 import 'package:online_cource_app/controllers/auth_controller.dart';
 import 'package:online_cource_app/firebase_options.dart';
 import 'package:online_cource_app/theme/app_theme.dart';
 import 'package:online_cource_app/theme/theme_controller.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  final binding = WidgetsFlutterBinding.ensureInitialized();
+
+  // Hold the native splash until Firebase and the theme are ready, so there is
+  // no blank frame between the OS splash and the app's own.
+  FlutterNativeSplash.preserve(widgetsBinding: binding);
 
   // Set preferred orientations
   await SystemChrome.setPreferredOrientations([
@@ -34,6 +40,7 @@ void main() async {
   // Configure EasyLoading
   configureEasyLoading(themeController.themeMode);
 
+  FlutterNativeSplash.remove();
   runApp(const MyApp());
 }
 
@@ -71,7 +78,7 @@ class MyApp extends StatelessWidget {
       theme: AppTheme.lightTheme(),
       darkTheme: AppTheme.darkTheme(),
       themeMode: Get.find<ThemeController>().themeMode,
-      home: const AuthGate(),
+      home: const SplashScreen(),
       builder: EasyLoading.init(),
       defaultTransition: Transition.fadeIn,
       transitionDuration: const Duration(milliseconds: 200),
