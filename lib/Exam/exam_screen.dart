@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' as services;
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
-import 'package:online_cource_app/Utils/dialouge_utils.dart';
+import 'package:online_cource_app/Utils/dialog_utils.dart';
 import 'package:online_cource_app/Utils/email_helper.dart';
 import 'package:online_cource_app/question_model.dart';
 import 'package:online_cource_app/data/exam_repository.dart';
@@ -114,7 +114,7 @@ class _ExamScreenState extends State<ExamScreen>
 
   void _endExam() async {
     _timer?.cancel();
-    showLoadingDialouge(context, 'Analyzing Results...');
+    showLoadingDialog(context, 'Analyzing Results...');
 
     // Persist the attempt first: the certificate is a bonus, and a failure
     // there must not lose the reader's score.

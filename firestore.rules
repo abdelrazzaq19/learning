@@ -1,0 +1,88 @@
+rules_version = '2';
+
+// Security rules for the E-Learning app.
+//
+// The admin UI is hidden client-side, but that is only cosmetic: these rules
+// are what actually stop a non-admin from writing to the catalogue.
+//
+// Deploy with:  firebase deploy --only firestore:rules
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid))
+             .data.role == 'admin';
+    }
+
+    // Only the enrollment counter may be touched by a normal signed-in user;
+    // everything else about a course is admin-only.
+    function onlyEnrollmentCountChanged() {
+      return request.resource.data.diff(resource.data)
+        .affectedKeys().hasOnly(['enrollmentCount']);
+    }
+
+    // Catalogue: world-readable, admin-writable.
+    match /courses/{courseId} {
+      allow read: if true;
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin()
+        || (isSignedIn() && onlyEnrollmentCountChanged());
+
+      match /lessons/{lessonId} {
+        allow read: if isSignedIn();
+        allow write: if isAdmin();
+      }
+    }
+
+    // A user owns their profile and everything under it.
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create, update: if isOwner(userId);
+      allow delete: if false;
+
+      // Role is assigned out of band (Firebase console or a trusted backend);
+      // a user must not be able to promote themselves.
+      allow update: if isOwner(userId)
+        && (!request.resource.data.diff(resource.data)
+              .affectedKeys().hasAny(['role'])
+            || request.resource.data.role == resource.data.role);
+
+      match /enrolledCourses/{courseId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // Retired schema, kept readable so the one-time migration can run.
+      match /enrollment/{docId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /bookmarks/{courseId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /examResults/{resultId} {
+        allow read, create: if isOwner(userId);
+        allow update, delete: if false;
+      }
+
+      match /certificates/{certificateId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    // Anything not matched above is denied.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

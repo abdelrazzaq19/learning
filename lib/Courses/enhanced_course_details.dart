@@ -5,7 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:get/get.dart';
 import 'package:online_cource_app/Courses/course_player.dart';
-import 'package:online_cource_app/Utils/enroll_dioulouge.dart';
+import 'package:online_cource_app/Utils/enroll_dialog.dart';
 import 'package:timeline_tile/timeline_tile.dart';
 import 'package:online_cource_app/Model/course_model.dart';
 import 'package:online_cource_app/controllers/auth_controller.dart';

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:quickalert/quickalert.dart';
 
-void showConfirmDialouge(
+void showConfirmDialog(
     BuildContext context, String title, void Function()? onConfirm) {
   QuickAlert.show(
       context: context,
@@ -13,7 +13,7 @@ void showConfirmDialouge(
       onConfirmBtnTap: onConfirm);
 }
 
-void showLoadingDialouge(BuildContext context, String title) {
+void showLoadingDialog(BuildContext context, String title) {
   QuickAlert.show(
     context: context,
     type: QuickAlertType.loading,
@@ -22,7 +22,7 @@ void showLoadingDialouge(BuildContext context, String title) {
   );
 }
 
-void showSuccessDialouge(
+void showSuccessDialog(
     BuildContext context, String title, void Function()? onConfirm) {
   QuickAlert.show(
       context: context,
@@ -31,7 +31,7 @@ void showSuccessDialouge(
       onConfirmBtnTap: onConfirm);
 }
 
-void showErrorDialouge(BuildContext context, String title,
+void showErrorDialog(BuildContext context, String title,
     [String heading = 'Oops...']) {
   QuickAlert.show(
     context: context,
@@ -41,7 +41,7 @@ void showErrorDialouge(BuildContext context, String title,
   );
 }
 
-void showInfoDialouge(BuildContext context, String title) {
+void showInfoDialog(BuildContext context, String title) {
   QuickAlert.show(
     context: context,
     type: QuickAlertType.info,

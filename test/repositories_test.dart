@@ -65,6 +65,48 @@ void main() {
       expect(await repository.totalDurationSeconds('c1'), 900);
     });
 
+    test('updateLesson changes the stored fields', () async {
+      await repository.updateLesson(
+        'c1',
+        'l1',
+        const LessonModel(
+          title: 'Setup (revised)',
+          videoUrl: 'https://example.com/1b.mp4',
+          order: 1,
+          durationSeconds: 420,
+        ),
+      );
+
+      final lessons = await repository.streamLessons('c1').first;
+      expect(lessons.first.title, 'Setup (revised)');
+      expect(lessons.first.durationSeconds, 420);
+    });
+
+    test('deleteLesson removes it', () async {
+      await repository.deleteLesson('c1', 'l1');
+
+      final lessons = await repository.streamLessons('c1').first;
+      expect(lessons.map((l) => l.id), isNot(contains('l1')));
+      expect(lessons, hasLength(1));
+    });
+
+    test('nextOrder follows the highest existing order', () async {
+      expect(await repository.nextOrder('c1'), 3);
+    });
+
+    test('nextOrder starts at 1 for a course with no lessons', () async {
+      expect(await repository.nextOrder('empty'), 1);
+    });
+
+    test('syncLessonCount writes the count onto the course', () async {
+      await firestore.collection('courses').doc('c1').set({'title': 'C'});
+
+      await repository.syncLessonCount('c1');
+
+      final course = await firestore.collection('courses').doc('c1').get();
+      expect(course.data()!['lessonCount'], 2);
+    });
+
     test('a malformed lesson document degrades instead of throwing', () async {
       await firestore
           .collection('courses')
@@ -125,6 +167,31 @@ void main() {
 
       final doc = await firestore.collection('users').doc('ghost').get();
       expect(doc.exists, isTrue);
+    });
+
+    test('updateProfile merges fields and stamps updatedAt', () async {
+      await repository.ensureUserDocument(uid: 'u1', email: 'a@b.com', name: 'Ada');
+
+      await repository.updateProfile('u1', {'name': 'Ada Lovelace'});
+
+      final data = await repository.getUser('u1');
+      expect(data['name'], 'Ada Lovelace');
+      expect(data['email'], 'a@b.com', reason: 'other fields must survive');
+      expect(data['updatedAt'], isNotNull);
+    });
+
+    test('updateProfile does not resurrect a deleted role', () async {
+      await repository.ensureUserDocument(uid: 'u1', email: 'a@b.com');
+      await repository.updateProfile('u1', {'name': 'Ada'});
+
+      expect((await repository.getUser('u1'))['role'], 'student');
+    });
+
+    test('streamUser emits the profile', () async {
+      await repository.ensureUserDocument(uid: 'u1', email: 'a@b.com', name: 'Ada');
+
+      final data = await repository.streamUser('u1').first;
+      expect(data['name'], 'Ada');
     });
 
     test('isAdmin reflects the stored role', () async {

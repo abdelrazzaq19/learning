@@ -4,16 +4,24 @@ import 'package:get/get.dart';
 import 'package:online_cource_app/controllers/auth_controller.dart';
 import 'package:online_cource_app/Login/login_page.dart';
 import 'package:online_cource_app/Utils/toast_messages.dart';
+import 'package:online_cource_app/About/about_screen.dart';
 import 'package:online_cource_app/About/certificates_screen.dart';
+import 'package:online_cource_app/About/edit_profile_screen.dart';
 import 'package:online_cource_app/Exam/exam_history.dart';
+import 'package:online_cource_app/Login/forgot_password_dialog.dart';
 import 'package:online_cource_app/data/enrollment_repository.dart';
 import 'package:online_cource_app/data/exam_repository.dart';
 import 'package:online_cource_app/theme/app_theme.dart';
 import 'package:online_cource_app/theme/theme_controller.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final authController = Get.find<AuthController>();
@@ -24,10 +32,10 @@ class ProfileScreen extends StatelessWidget {
         title: const Text('My Profile'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings_rounded),
-            onPressed: () {
-              // Navigate to settings screen
-            },
+            tooltip: 'Edit profile',
+            icon: const Icon(Icons.edit_rounded),
+            onPressed: () => Get.to(() => const EditProfileScreen())
+                ?.then((_) => setState(() {})),
           ),
         ],
       ),
@@ -85,7 +93,8 @@ class ProfileScreen extends StatelessWidget {
                     // Edit profile button
                     OutlinedButton.icon(
                       onPressed: () {
-                        // Navigate to edit profile screen
+                        Get.to(() => const EditProfileScreen())
+                            ?.then((_) => setState(() {}));
                       },
                       icon: const Icon(Icons.edit_rounded),
                       label: const Text('Edit Profile'),
@@ -261,9 +270,7 @@ class ProfileScreen extends StatelessWidget {
           _buildOptionItem(
             icon: Icons.verified_user_rounded,
             title: 'Account Settings',
-            onTap: () {
-              // Navigate to account settings
-            },
+            onTap: () => Get.to(() => const EditProfileScreen()),
           ),
           const Divider(),
           _buildOptionItem(
@@ -280,18 +287,17 @@ class ProfileScreen extends StatelessWidget {
           const Divider(),
           _buildOptionItem(
             icon: Icons.lock_rounded,
-            title: 'Privacy & Security',
-            onTap: () {
-              // Navigate to privacy settings
-            },
+            title: 'Change Password',
+            onTap: () => showForgotPasswordDialog(
+              context,
+              initialEmail: FirebaseAuth.instance.currentUser?.email ?? '',
+            ),
           ),
           const Divider(),
           _buildOptionItem(
             icon: Icons.help_rounded,
             title: 'Help & Support',
-            onTap: () {
-              // Navigate to help center
-            },
+            onTap: () => Get.to(() => const AboutPage()),
           ),
           const Divider(),
           _buildOptionItem(

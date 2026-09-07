@@ -17,6 +17,11 @@ class _AddCourseScreenState extends State<AddCourseScreen> {
   String _cover = '';
   String _title = '';
   String _duration = '';
+  // Previously missing from the form, so every admin-created course silently
+  // took the model defaults (and used to cost 1400).
+  String _description = '';
+  String _category = 'General';
+  double _price = 0;
   List<String> _instructors = [];
   String _tempInstructor = '';
 
@@ -35,6 +40,11 @@ class _AddCourseScreenState extends State<AddCourseScreen> {
           title: _title,
           duration: _duration,
           instructors: _instructors,
+          description: _description.isEmpty
+              ? 'No description available'
+              : _description,
+          category: _category.isEmpty ? 'General' : _category,
+          price: _price,
         ));
 
         // Hide loading indicator
@@ -67,14 +77,7 @@ class _AddCourseScreenState extends State<AddCourseScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text(
-          'Add New Course',
-          style: TextStyle(color: Colors.white),
-        ),
-        backgroundColor: Colors.black,
-      ),
+      appBar: AppBar(title: const Text('Add New Course')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -134,6 +137,51 @@ class _AddCourseScreenState extends State<AddCourseScreen> {
                   onSaved: (value) {
                     _duration = value!;
                   },
+                ),
+                const SizedBox(height: 20),
+
+                // Category Input
+                TextFormField(
+                  initialValue: _category,
+                  decoration: const InputDecoration(
+                    labelText: 'Category',
+                    helperText: 'Used by search and the category filter',
+                    border: OutlineInputBorder(),
+                  ),
+                  onSaved: (value) => _category = value?.trim() ?? 'General',
+                ),
+                const SizedBox(height: 20),
+
+                // Price Input
+                TextFormField(
+                  initialValue: '0',
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Price (BDT)',
+                    helperText: '0 marks the course as free',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) return null;
+                    if (double.tryParse(value.trim()) == null) {
+                      return 'Enter a number';
+                    }
+                    return null;
+                  },
+                  onSaved: (value) =>
+                      _price = double.tryParse(value?.trim() ?? '') ?? 0,
+                ),
+                const SizedBox(height: 20),
+
+                // Description Input
+                TextFormField(
+                  maxLines: 4,
+                  decoration: const InputDecoration(
+                    labelText: 'Description',
+                    alignLabelWithHint: true,
+                    border: OutlineInputBorder(),
+                  ),
+                  onSaved: (value) => _description = value?.trim() ?? '',
                 ),
                 const SizedBox(height: 20),
 

@@ -40,6 +40,26 @@ class LessonRepository {
     return _lessons(courseId).doc(lessonId).delete();
   }
 
+  /// The order value a newly added lesson should take.
+  Future<int> nextOrder(String courseId) async {
+    final lessons = await getLessons(courseId);
+    if (lessons.isEmpty) return 1;
+    return lessons.map((l) => l.order).reduce((a, b) => a > b ? a : b) + 1;
+  }
+
+  /// Mirrors the lesson count onto the course document so course cards can
+  /// show it without reading the subcollection.
+  Future<int> syncLessonCount(String courseId) async {
+    if (courseId.isEmpty) return 0;
+
+    final lessons = await getLessons(courseId);
+    await _firestore.collection('courses').doc(courseId).set(
+      {'lessonCount': lessons.length},
+      SetOptions(merge: true),
+    );
+    return lessons.length;
+  }
+
   Future<int> totalDurationSeconds(String courseId) async {
     final lessons = await getLessons(courseId);
     return lessons.fold<int>(0, (total, l) => total + l.durationSeconds);

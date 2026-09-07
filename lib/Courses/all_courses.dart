@@ -2,7 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:online_cource_app/Courses/bookmarks_screen.dart';
-import 'package:online_cource_app/Courses/course_details.dart';
+import 'package:online_cource_app/Courses/enhanced_course_details.dart';
 import 'package:online_cource_app/Courses/course_search.dart';
 import 'package:online_cource_app/Model/course_model.dart';
 import 'package:online_cource_app/data/course_repository.dart';
@@ -71,7 +71,7 @@ class CourseCard extends StatelessWidget {
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () => Get.to(() => CourseDetailsPage(course: course)),
+        onTap: () => Get.to(() => EnhancedCourseDetailsPage(course: course)),
         child: Stack(
           fit: StackFit.passthrough,
           children: [

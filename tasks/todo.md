@@ -51,9 +51,15 @@ Plan: [tasks/plan.md](plan.md)
 - [ ] **Checkpoint C** — enroll → watch → progress → exam → certificate on real data; review with user
 
 ## Phase 4 — Admin, profile, polish
-- [ ] **T10** Admin role gate + lesson CRUD + `firestore.rules` — M — needs T8
-- [ ] **T11** Profile: edit, real stats, forgot password, `Get.find` fix — M — needs T3, T9
-- [ ] **T12** Retire legacy screens + rename misspelled files/functions — M — needs all
+- [x] **T10** Admin role gate + lesson CRUD + `firestore.rules` — M — needs T8
+  - Drawer shows Manage Courses only for `role == 'admin'`; `ManageLessonsScreen` for lesson CRUD
+  - Admin course form now writes description/price/category (was silently defaulting)
+  - `firestore.rules` written and registered in `firebase.json` - NOT deployed, user must deploy
+  - Tests: +5 in `test/repositories_test.dart` (update/delete/nextOrder/syncLessonCount)
+- [x] **T11** Profile: edit, real stats, forgot password, `Get.find` fix — M — needs T3, T9
+  - `EditProfileScreen`, `showForgotPasswordDialog`; every dead Profile stub now goes somewhere real
+- [x] **T12** Retire legacy screens + rename misspelled files/functions — M — needs all
+  - Deleted legacy `course_details.dart`; renamed alll_courses / sign_up_scree / dialouge / dioulouge
 - [ ] **Checkpoint D** — analyze clean, Android build, full flow light + dark; user commits and pushes
 
 ## Notes

@@ -2,7 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:get/get.dart';
-import 'package:online_cource_app/Courses/alll_courses.dart';
+import 'package:online_cource_app/Courses/all_courses.dart';
 import 'package:online_cource_app/Courses/bookmarks_screen.dart';
 import 'package:online_cource_app/Courses/course_player.dart';
 import 'package:online_cource_app/Courses/course_search.dart';

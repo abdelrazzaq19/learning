@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:online_cource_app/About/about_screen.dart';
-import 'package:online_cource_app/Courses/alll_courses.dart';
+import 'package:online_cource_app/Courses/all_courses.dart';
 import 'package:online_cource_app/Courses/enrolled_course.dart';
 import 'package:online_cource_app/Exam/exam_home.dart';
 
 import 'package:online_cource_app/Home/home_page.dart';
 import 'package:online_cource_app/Login/login_page.dart';
 
+import 'package:online_cource_app/admin/admin_all_course.dart';
 import 'package:online_cource_app/controllers/auth_controller.dart';
 
 class CustomDrawer extends StatelessWidget {
@@ -69,6 +70,25 @@ class CustomDrawer extends StatelessWidget {
               Get.to(() => const AboutPage());
             },
           ),
+          // Admin entry appears only for users with role == 'admin'.
+          Obx(() {
+            final controller = Get.find<AuthController>();
+            // Touch userData so this rebuilds when the profile loads.
+            final isAdmin = controller.userData['role'] == 'admin';
+            if (!isAdmin) return const SizedBox.shrink();
+
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.admin_panel_settings_rounded),
+                  title: const Text('Manage Courses'),
+                  onTap: () => Get.to(() => const AdminCoursesScreen()),
+                ),
+              ],
+            );
+          }),
           ListTile(
             leading: const Icon(Icons.exit_to_app_rounded),
             title: const Text('Sign Out'),

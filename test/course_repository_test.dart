@@ -165,7 +165,7 @@ void main() {
         'instructor': ['Ada'],
       });
 
-      final updated = await courses_backfill(repository);
+      final updated = await backfillFor(repository);
 
       expect(updated, 1);
       final doc = await firestore.collection('courses').doc('old').get();
@@ -174,7 +174,7 @@ void main() {
 
     test('backfillSearchFields is a no-op when everything is indexed',
         () async {
-      expect(await courses_backfill(repository), 0);
+      expect(await backfillFor(repository), 0);
     });
 
     test('search finds a backfilled course by prefix', () async {
@@ -184,7 +184,7 @@ void main() {
         'duration': '1 week',
         'instructor': ['Ada'],
       });
-      await courses_backfill(repository);
+      await backfillFor(repository);
 
       final results = await repository.searchCourses('legacy');
       expect(results.single.title, 'Legacy Course');
@@ -210,5 +210,5 @@ void main() {
 }
 
 /// Small indirection so the test reads clearly.
-Future<int> courses_backfill(CourseRepository repository) =>
+Future<int> backfillFor(CourseRepository repository) =>
     repository.backfillSearchFields();

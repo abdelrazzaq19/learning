@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:online_cource_app/Login/login_page.dart';
-import 'package:online_cource_app/Utils/dialouge_utils.dart';
+import 'package:online_cource_app/Utils/dialog_utils.dart';
 import 'package:online_cource_app/Utils/toast_messages.dart';
 import 'package:online_cource_app/controllers/auth_controller.dart';
 import 'package:online_cource_app/theme/app_theme.dart';
@@ -60,7 +60,7 @@ class _SignUpPageState extends State<SignUpPage>
     });
 
     try {
-      showLoadingDialouge(context, 'Signing up...');
+      showLoadingDialog(context, 'Signing up...');
       await auth.signUpNewUsers(context, _emailController.text.trim(),
           _passwordController.text.trim(), _nameController.text.trim());
       if (!mounted) return;

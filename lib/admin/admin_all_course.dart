@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:online_cource_app/Model/course_model.dart';
 import 'package:online_cource_app/admin/add_new_course.dart';
+import 'package:online_cource_app/admin/manage_lessons.dart';
 import 'package:online_cource_app/data/course_repository.dart';
 import 'package:online_cource_app/theme/app_theme.dart';
 import 'package:online_cource_app/widgets/app_states.dart';
@@ -46,8 +47,14 @@ class _AdminCoursesScreenState extends State<AdminCoursesScreen> {
           padding: const EdgeInsets.all(AppTheme.spaceMd),
           itemCount: courses.length,
           separatorBuilder: (_, __) => const SizedBox(height: AppTheme.spaceMd),
-          itemBuilder: (context, index) =>
-              _AdminCourseTile(course: courses[index]),
+          itemBuilder: (context, index) {
+            final course = courses[index];
+            return _AdminCourseTile(
+              course: course,
+              onManageLessons: () =>
+                  Get.to(() => ManageLessonsScreen(course: course)),
+            );
+          },
         ),
       ),
     );
@@ -55,9 +62,10 @@ class _AdminCoursesScreenState extends State<AdminCoursesScreen> {
 }
 
 class _AdminCourseTile extends StatelessWidget {
-  const _AdminCourseTile({required this.course});
+  const _AdminCourseTile({required this.course, required this.onManageLessons});
 
   final CourseModel course;
+  final VoidCallback onManageLessons;
 
   @override
   Widget build(BuildContext context) {
@@ -122,7 +130,27 @@ class _AdminCourseTile extends StatelessWidget {
                             ? 'Free'
                             : 'BDT ${course.price.toStringAsFixed(0)}',
                       ),
+                      _MetaChip(
+                        icon: Icons.ondemand_video_outlined,
+                        label: course.lessonCount == 1
+                            ? '1 lesson'
+                            : '${course.lessonCount} lessons',
+                      ),
                     ],
+                  ),
+                  const SizedBox(height: AppTheme.spaceSm),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: OutlinedButton.icon(
+                      onPressed: onManageLessons,
+                      icon: const Icon(Icons.playlist_play, size: 18),
+                      label: const Text('Manage lessons'),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(0, 36),
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        textStyle: const TextStyle(fontSize: 13),
+                      ),
+                    ),
                   ),
                 ],
               ),

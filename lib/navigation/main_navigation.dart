@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:online_cource_app/About/profile_screen.dart';
-import 'package:online_cource_app/Courses/alll_courses.dart';
+import 'package:online_cource_app/Courses/all_courses.dart';
 import 'package:online_cource_app/Courses/enrolled_course.dart';
 import 'package:online_cource_app/Exam/exam_home.dart';
 import 'package:online_cource_app/Home/home_page.dart';

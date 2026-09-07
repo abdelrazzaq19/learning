@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:online_cource_app/SignUp/sign_up_scree.dart';
-import 'package:online_cource_app/Utils/dialouge_utils.dart';
+import 'package:online_cource_app/SignUp/sign_up_screen.dart';
+import 'package:online_cource_app/Utils/dialog_utils.dart';
 import 'package:online_cource_app/Utils/toast_messages.dart';
 import 'package:online_cource_app/controllers/auth_controller.dart';
 import 'package:online_cource_app/navigation/main_navigation.dart';
+import 'package:online_cource_app/Login/forgot_password_dialog.dart';
 import 'package:online_cource_app/theme/app_theme.dart';
 
 class LoginPage extends StatefulWidget {
@@ -62,7 +63,7 @@ class _LoginPageState extends State<LoginPage>
     String password = _passwordController.text.trim();
 
     try {
-      showLoadingDialouge(context, 'Signing in...');
+      showLoadingDialog(context, 'Signing in...');
       final user = await auth.signInUsers(context, email, password);
       if (!mounted) return;
 
@@ -229,9 +230,10 @@ class _LoginPageState extends State<LoginPage>
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
-                        onPressed: () {
-                          // Forgot password functionality
-                        },
+                        onPressed: () => showForgotPasswordDialog(
+                          context,
+                          initialEmail: _emailController.text.trim(),
+                        ),
                         style: TextButton.styleFrom(
                           foregroundColor: AppTheme.primaryColor,
                         ),

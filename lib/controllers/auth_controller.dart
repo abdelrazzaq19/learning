@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:online_cource_app/Model/course_model.dart';
-import 'package:online_cource_app/Utils/dialouge_utils.dart';
+import 'package:online_cource_app/Utils/dialog_utils.dart';
 import 'package:online_cource_app/data/course_repository.dart';
 import 'package:online_cource_app/data/enrollment_repository.dart';
 import 'package:online_cource_app/data/user_repository.dart';
@@ -15,6 +15,11 @@ class AuthController extends GetxController {
   final Rx<User?> firebaseUser = Rx<User?>(null);
   final RxBool isLoading = false.obs;
   final RxMap<String, dynamic> userData = RxMap<String, dynamic>({});
+
+  /// True when the signed-in user's profile carries `role: 'admin'`.
+  /// Admin-only UI is hidden unless this is set; Firestore rules enforce it
+  /// server-side (see firestore.rules).
+  bool get isAdmin => userData['role'] == 'admin';
 
   // Enrollment lives in one place; this controller only delegates to it.
   final EnrollmentRepository _enrollments = EnrollmentRepository();
@@ -252,10 +257,10 @@ class AuthController extends GetxController {
           errorMessage = 'An error occurred during registration: ${e.message}';
       }
       if (!context.mounted) return null;
-      showErrorDialouge(context, errorMessage);
+      showErrorDialog(context, errorMessage);
     } catch (e) {
       if (!context.mounted) return null;
-      showErrorDialouge(context, 'An unexpected error occurred: $e');
+      showErrorDialog(context, 'An unexpected error occurred: $e');
     } finally {
       isLoading.value = false;
     }
@@ -296,10 +301,10 @@ class AuthController extends GetxController {
           errorMessage = 'An error occurred during sign in: ${e.message}';
       }
       if (!context.mounted) return null;
-      showErrorDialouge(context, errorMessage);
+      showErrorDialog(context, errorMessage);
     } catch (e) {
       if (!context.mounted) return null;
-      showErrorDialouge(context, 'An unexpected error occurred: $e');
+      showErrorDialog(context, 'An unexpected error occurred: $e');
     } finally {
       isLoading.value = false;
     }
@@ -321,7 +326,7 @@ class AuthController extends GetxController {
       isLoading.value = true;
       await _auth.signOut();
     } catch (e) {
-      showErrorDialouge(Get.context!, 'Error signing out: ${e.toString()}');
+      showErrorDialog(Get.context!, 'Error signing out: ${e.toString()}');
     } finally {
       isLoading.value = false;
     }
