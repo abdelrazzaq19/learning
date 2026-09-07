@@ -1,17 +1,18 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:online_cource_app/Exam/exam_screen.dart';
 
 class ExamTile extends StatelessWidget {
   final String name;
-  final String timne;
+  final String time;
   final String question;
   final String questionAssetName;
 
   const ExamTile({
     super.key,
     required this.name,
-    required this.timne,
+    required this.time,
     required this.question,
     required this.questionAssetName,
   });
@@ -25,7 +26,7 @@ class ExamTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             spreadRadius: 0,
             offset: const Offset(0, 4),
@@ -37,10 +38,14 @@ class ExamTile extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
           onTap: () {
+            final user = FirebaseAuth.instance.currentUser;
+            final displayName = user?.displayName?.trim();
             Get.to(() => ExamScreen(
                   questionPath: questionAssetName,
-                  userName: "User Name", // Replace with actual user name
-                  userEmail: "user@example.com", // Replace with actual email
+                  userName: (displayName == null || displayName.isEmpty)
+                      ? 'Student'
+                      : displayName,
+                  userEmail: user?.email ?? '',
                   examName: name,
                 ));
           },
@@ -52,7 +57,7 @@ class ExamTile extends StatelessWidget {
                   height: 56,
                   width: 56,
                   decoration: BoxDecoration(
-                    color: getExamColor(name).withOpacity(0.15),
+                    color: getExamColor(name).withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Center(
@@ -88,7 +93,7 @@ class ExamTile extends StatelessWidget {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                timne,
+                                time,
                                 style: const TextStyle(
                                   fontSize: 14,
                                   color: Color(0xFF888888),

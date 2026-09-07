@@ -1,13 +1,16 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' as rootBundle;
+import 'package:flutter/services.dart' as services;
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:online_cource_app/Utils/dialouge_utils.dart';
 import 'package:online_cource_app/Utils/email_helper.dart';
 import 'package:online_cource_app/question_model.dart';
+import 'package:online_cource_app/data/exam_repository.dart';
+import 'package:online_cource_app/widgets/app_states.dart';
 import 'package:confetti/confetti.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
@@ -19,16 +22,20 @@ class ExamScreen extends StatefulWidget {
   final String userEmail;
   final String examName;
 
+  /// Overridable for tests; production reads the signed-in user.
+  final String? uid;
+
   const ExamScreen({
     super.key,
     required this.questionPath,
     required this.userName,
     required this.userEmail,
     required this.examName,
+    this.uid,
   });
 
   @override
-  _ExamScreenState createState() => _ExamScreenState();
+  State<ExamScreen> createState() => _ExamScreenState();
 }
 
 class _ExamScreenState extends State<ExamScreen>
@@ -41,7 +48,10 @@ class _ExamScreenState extends State<ExamScreen>
   List<Question> questions = [];
   int score = 0;
   late ConfettiController _confettiController;
-  late Timer _timer;
+  Timer? _timer;
+  // `late` so Firestore is not touched until an attempt is recorded.
+  late final ExamRepository _exams = ExamRepository();
+  String? _certificateNote;
   int _remainingTime = 0;
 
   @override
@@ -49,11 +59,17 @@ class _ExamScreenState extends State<ExamScreen>
     super.initState();
     futureQuestions = loadQuestions(widget.questionPath);
     futureQuestions.then((questionList) {
+      // The screen can be popped before the questions arrive.
+      if (!mounted) return;
       setState(() {
         questions = questionList.questions;
         _remainingTime = questions.length * 10; // 10 seconds per question
         startTimer();
       });
+    }).catchError((Object error) {
+      // Swallowed here so the failure surfaces through the FutureBuilder
+      // instead of as an unhandled async error.
+      debugPrint('Could not load exam questions: $error');
     });
     _confettiController =
         ConfettiController(duration: const Duration(milliseconds: 700));
@@ -65,7 +81,7 @@ class _ExamScreenState extends State<ExamScreen>
         if (_remainingTime > 0) {
           _remainingTime--;
         } else {
-          _timer.cancel();
+          _timer?.cancel();
           _endExam();
         }
       });
@@ -97,12 +113,55 @@ class _ExamScreenState extends State<ExamScreen>
   }
 
   void _endExam() async {
+    _timer?.cancel();
     showLoadingDialouge(context, 'Analyzing Results...');
+
+    // Persist the attempt first: the certificate is a bonus, and a failure
+    // there must not lose the reader's score.
+    await _recordAttempt();
     await _generateAndSendPDF();
+
+    if (!mounted) return;
     setState(() {
       currentIndex = questions.length; // Show final score screen
     });
     Get.back();
+  }
+
+  Future<void> _recordAttempt() async {
+    final uid = widget.uid ?? FirebaseAuth.instance.currentUser?.uid ?? '';
+    if (uid.isEmpty) return;
+
+    try {
+      await _exams.recordResult(
+        uid: uid,
+        examId: widget.questionPath,
+        examName: widget.examName,
+        score: score,
+        total: questions.length,
+      );
+
+      final result = ExamResult(
+        id: '',
+        examId: widget.questionPath,
+        examName: widget.examName,
+        score: score,
+        total: questions.length,
+      );
+
+      // Only a pass earns a certificate.
+      if (result.passed) {
+        await _exams.issueCertificate(
+          uid: uid,
+          examId: widget.questionPath,
+          examName: widget.examName,
+          candidateName: widget.userName,
+          score: '$score / ${questions.length}',
+        );
+      }
+    } catch (e) {
+      debugPrint('Could not record the exam result: $e');
+    }
   }
 
   Future<void> _generateAndSendPDF() async {
@@ -110,7 +169,7 @@ class _ExamScreenState extends State<ExamScreen>
     final output = await getTemporaryDirectory();
     final file = File("${output.path}/certificate.pdf");
 
-    final logo = await rootBundle.rootBundle.load('assets/logo.png');
+    final logo = await services.rootBundle.load('assets/logo.png');
     final logoImage = pw.MemoryImage(logo.buffer.asUint8List());
 
     pdf.addPage(
@@ -244,19 +303,29 @@ class _ExamScreenState extends State<ExamScreen>
     );
 
     await file.writeAsBytes(await pdf.save());
-    await CertificationEmailService().sendCertification(
+
+    // Email is best-effort: without SMTP configured the PDF is still saved
+    // locally, and the exam result is already recorded either way.
+    final sent = await CertificationEmailService().sendCertification(
         receiverEmail: widget.userEmail,
         pdfFile: file,
         candidateName: widget.userName,
         examName: widget.examName,
         score: '$score / ${questions.length}',
         examDate: DateFormat('h:mm a, d MMM, yyyy').format(DateTime.now()));
+
+    if (!mounted) return;
+    setState(() {
+      _certificateNote = sent
+          ? 'Your certificate was emailed to ${widget.userEmail}.'
+          : 'Your certificate was saved to this device.';
+    });
   }
 
   @override
   void dispose() {
     _confettiController.dispose();
-    _timer.cancel();
+    _timer?.cancel();
     super.dispose();
   }
 
@@ -300,36 +369,14 @@ class _ExamScreenState extends State<ExamScreen>
               ),
             );
           } else if (snapshot.hasError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.error_outline,
-                    color: Colors.red,
-                    size: 60,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Error loading questions: ${snapshot.error}',
-                    style: const TextStyle(color: Colors.red),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF5271FF),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    onPressed: () => Get.back(),
-                    child: const Text('Go Back'),
-                  ),
-                ],
-              ),
+            return AppErrorState(
+              title: 'Could not load the exam',
+              message: 'These questions could not be opened. '
+                  'Check your connection and try again.',
+              error: snapshot.error,
+              onRetry: () => setState(() {
+                futureQuestions = loadQuestions(widget.questionPath);
+              }),
             );
           } else {
             if (questions.isEmpty) {
@@ -460,7 +507,7 @@ class _ExamScreenState extends State<ExamScreen>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             spreadRadius: 0,
             offset: const Offset(0, 4),
@@ -543,7 +590,7 @@ class _ExamScreenState extends State<ExamScreen>
                   border: Border.all(color: borderColor, width: 1.5),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.03),
+                      color: Colors.black.withValues(alpha: 0.03),
                       blurRadius: 8,
                       spreadRadius: 0,
                       offset: const Offset(0, 2),
@@ -717,7 +764,7 @@ class _ExamScreenState extends State<ExamScreen>
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 10,
                   spreadRadius: 0,
                   offset: const Offset(0, 4),
@@ -747,10 +794,13 @@ class _ExamScreenState extends State<ExamScreen>
                   ],
                 ),
                 const SizedBox(height: 16),
-                const Text(
-                  'Your certificate has been generated and sent to your email.',
+                Text(
+                  // Says what actually happened rather than always claiming
+                  // the email was sent.
+                  _certificateNote ??
+                      'Your certificate was saved to this device.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 16,
                     color: Color(0xFF666666),
                   ),
@@ -793,7 +843,7 @@ class _ExamScreenState extends State<ExamScreen>
   }
 
   Future<QuestionList> loadQuestions(String path) async {
-    final jsonData = await rootBundle.rootBundle.loadString(path);
+    final jsonData = await services.rootBundle.loadString(path);
     return QuestionList.fromJson(json.decode(jsonData));
   }
 }

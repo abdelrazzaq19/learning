@@ -1,21 +1,22 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:get/get.dart';
-import 'package:online_cource_app/Courses/course_play.dart';
+import 'package:online_cource_app/Courses/course_player.dart';
 import 'package:online_cource_app/Utils/enroll_dioulouge.dart';
 import 'package:timeline_tile/timeline_tile.dart';
 import 'package:online_cource_app/Model/course_model.dart';
 import 'package:online_cource_app/controllers/auth_controller.dart';
 import 'package:online_cource_app/theme/app_theme.dart';
+import 'package:online_cource_app/widgets/bookmark_button.dart';
 import 'package:readmore/readmore.dart';
 
 class EnhancedCourseDetailsPage extends StatefulWidget {
   final CourseModel course;
 
-  const EnhancedCourseDetailsPage({Key? key, required this.course})
-      : super(key: key);
+  const EnhancedCourseDetailsPage({super.key, required this.course});
 
   @override
   State<EnhancedCourseDetailsPage> createState() =>
@@ -69,60 +70,6 @@ class _EnhancedCourseDetailsPageState extends State<EnhancedCourseDetailsPage>
     });
   }
 
-  Future<void> _startCourse() async {
-    // Navigate to the course player
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => CoursePage(course: widget.course),
-      ),
-    );
-  }
-
-  Future<void> _enrollCourse() async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final result = await _authController.enrollInCourse(
-          widget.course.id ?? "", widget.course.price);
-
-      if (result) {
-        setState(() {
-          _isEnrolled = true;
-        });
-
-        // Show success message
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Successfully enrolled in the course!'),
-            backgroundColor: AppTheme.successColor,
-          ),
-        );
-      } else {
-        // Show error message
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to enroll in the course. Please try again.'),
-            backgroundColor: AppTheme.errorColor,
-          ),
-        );
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: ${e.toString()}'),
-          backgroundColor: AppTheme.errorColor,
-        ),
-      );
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -166,7 +113,7 @@ class _EnhancedCourseDetailsPageState extends State<EnhancedCourseDetailsPage>
       leading: Container(
         margin: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.3),
+          color: Colors.black.withValues(alpha: 0.3),
           shape: BoxShape.circle,
         ),
         child: IconButton(
@@ -178,26 +125,19 @@ class _EnhancedCourseDetailsPageState extends State<EnhancedCourseDetailsPage>
         Container(
           margin: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.3),
+            color: Colors.black.withValues(alpha: 0.3),
             shape: BoxShape.circle,
           ),
-          child: IconButton(
-            icon: const Icon(Icons.favorite_border, color: Colors.white),
-            onPressed: () {
-              // Add course to favorites
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Added to favorites!'),
-                  duration: Duration(seconds: 1),
-                ),
-              );
-            },
+          child: BookmarkButton(
+            course: widget.course,
+            uid: FirebaseAuth.instance.currentUser?.uid ?? '',
+            color: Colors.white,
           ),
         ),
         Container(
           margin: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.3),
+            color: Colors.black.withValues(alpha: 0.3),
             shape: BoxShape.circle,
           ),
           child: IconButton(
@@ -242,7 +182,7 @@ class _EnhancedCourseDetailsPageState extends State<EnhancedCourseDetailsPage>
                 begin: Alignment.bottomCenter,
                 end: Alignment.topCenter,
                 colors: [
-                  Colors.black.withOpacity(0.7),
+                  Colors.black.withValues(alpha: 0.7),
                   Colors.transparent,
                 ],
               ),
@@ -486,7 +426,7 @@ class _EnhancedCourseDetailsPageState extends State<EnhancedCourseDetailsPage>
           const SizedBox(height: 16),
 
           // Review list
-          ...reviews.map((review) => _buildReviewItem(review)).toList(),
+          ...reviews.map((review) => _buildReviewItem(review)),
 
           const SizedBox(height: 16),
           Center(
@@ -528,7 +468,7 @@ class _EnhancedCourseDetailsPageState extends State<EnhancedCourseDetailsPage>
           child: LinearProgressIndicator(
             value: percentage,
             backgroundColor: Colors.grey[200],
-            valueColor: AlwaysStoppedAnimation<Color>(Colors.amber),
+            valueColor: const AlwaysStoppedAnimation<Color>(Colors.amber),
             minHeight: 8,
             borderRadius: BorderRadius.circular(4),
           ),
@@ -634,7 +574,7 @@ class _EnhancedCourseDetailsPageState extends State<EnhancedCourseDetailsPage>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: AppTheme.accentColor.withOpacity(0.1),
+                color: AppTheme.accentColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Row(
@@ -725,7 +665,7 @@ class _EnhancedCourseDetailsPageState extends State<EnhancedCourseDetailsPage>
           return ListTile(
             contentPadding: EdgeInsets.zero,
             leading: CircleAvatar(
-              backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+              backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.1),
               child: Text(
                 instructor[0].toUpperCase(),
                 style: GoogleFonts.poppins(
@@ -748,7 +688,7 @@ class _EnhancedCourseDetailsPageState extends State<EnhancedCourseDetailsPage>
               ),
             ),
           );
-        }).toList(),
+        }),
       ],
     );
   }
@@ -820,10 +760,10 @@ class _EnhancedCourseDetailsPageState extends State<EnhancedCourseDetailsPage>
                 Container(
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withOpacity(0.1),
+                    color: AppTheme.primaryColor.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(
+                  child: const Icon(
                     Icons.check,
                     color: AppTheme.primaryColor,
                     size: 16,
@@ -842,7 +782,7 @@ class _EnhancedCourseDetailsPageState extends State<EnhancedCourseDetailsPage>
               ],
             ),
           );
-        }).toList(),
+        }),
       ],
     );
   }
@@ -889,7 +829,7 @@ class _EnhancedCourseDetailsPageState extends State<EnhancedCourseDetailsPage>
               ],
             ),
           );
-        }).toList(),
+        }),
       ],
     );
   }
@@ -913,8 +853,8 @@ class _EnhancedCourseDetailsPageState extends State<EnhancedCourseDetailsPage>
             ),
           ),
           beforeLineStyle:
-              LineStyle(color: AppTheme.primaryColor, thickness: 4),
-          afterLineStyle: LineStyle(color: AppTheme.primaryColor, thickness: 4),
+              const LineStyle(color: AppTheme.primaryColor, thickness: 4),
+          afterLineStyle: const LineStyle(color: AppTheme.primaryColor, thickness: 4),
           endChild: _buildTimelineContent(item),
         );
       }),
@@ -963,7 +903,7 @@ class _EnhancedCourseDetailsPageState extends State<EnhancedCourseDetailsPage>
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => CoursePage(course: widget.course),
+                        builder: (context) => CoursePlayerPage(course: widget.course),
                       ),
                     );
                   },
@@ -994,7 +934,7 @@ class _EnhancedCourseDetailsPageState extends State<EnhancedCourseDetailsPage>
           color: Colors.white,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, -5),
             ),
@@ -1009,7 +949,7 @@ class _EnhancedCourseDetailsPageState extends State<EnhancedCourseDetailsPage>
                         context,
                         MaterialPageRoute(
                           builder: (context) =>
-                              CoursePage(course: widget.course),
+                              CoursePlayerPage(course: widget.course),
                         ),
                       );
                     },
@@ -1021,7 +961,12 @@ class _EnhancedCourseDetailsPageState extends State<EnhancedCourseDetailsPage>
                   )
                 : ElevatedButton(
                     onPressed: () {
-                      showEnrollmentDialog(context, widget.course);
+                      showEnrollmentDialog(context, widget.course)
+                          .then((enrolled) {
+                        if (enrolled && mounted) {
+                          setState(() => _isEnrolled = true);
+                        }
+                      });
                     },
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.all(16),

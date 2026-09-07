@@ -1,187 +1,196 @@
-import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:get/get.dart';
-import 'package:online_cource_app/Courses/enhanced_course_details.dart';
-import 'package:online_cource_app/Detail/course_detail.dart';
-import 'package:online_cource_app/Model/course_model.dart';
-import 'package:online_cource_app/Model/model.dart.dart';
-import 'package:online_cource_app/theme/app_theme.dart';
-import 'package:online_cource_app/Utils/custom_drawer.dart';
-import 'package:online_cource_app/constants.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:shimmer/shimmer.dart';
+import 'package:get/get.dart';
+import 'package:online_cource_app/Courses/alll_courses.dart';
+import 'package:online_cource_app/Courses/bookmarks_screen.dart';
+import 'package:online_cource_app/Courses/course_player.dart';
+import 'package:online_cource_app/Courses/course_search.dart';
+import 'package:online_cource_app/Courses/enhanced_course_details.dart';
+import 'package:online_cource_app/Home/home_presentation.dart';
+import 'package:online_cource_app/Model/course_model.dart';
+import 'package:online_cource_app/Utils/custom_drawer.dart';
+import 'package:online_cource_app/data/course_repository.dart';
+import 'package:online_cource_app/data/enrollment_repository.dart';
+import 'package:online_cource_app/theme/app_theme.dart';
+import 'package:online_cource_app/widgets/app_states.dart';
+import 'package:online_cource_app/widgets/course_card.dart';
 
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key});
+  const MyHomePage({
+    super.key,
+    this.courseRepository,
+    this.enrollmentRepository,
+  });
+
+  /// Injectable for tests; production uses the Firestore-backed defaults.
+  final CourseRepository? courseRepository;
+  final EnrollmentRepository? enrollmentRepository;
 
   @override
-  _MyHomePageState createState() => _MyHomePageState();
+  State<MyHomePage> createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage>
-    with SingleTickerProviderStateMixin {
-  GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
-  final TextEditingController _searchController = TextEditingController();
-  final FocusNode _searchFocus = FocusNode();
-  bool _isSearching = false;
-  bool _isLoading = true;
-  late AnimationController _animationController;
+class _MyHomePageState extends State<MyHomePage> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  @override
-  void initState() {
-    super.initState();
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 300),
-    );
+  late final CourseRepository _courses =
+      widget.courseRepository ?? CourseRepository();
+  late final EnrollmentRepository _enrollments =
+      widget.enrollmentRepository ?? EnrollmentRepository();
 
-    // Simulate loading data
-    Future.delayed(const Duration(seconds: 1), () {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    });
+  String get _uid => FirebaseAuth.instance.currentUser?.uid ?? '';
+
+  Future<void> _refresh() async {
+    // The streams are live, so a refresh only needs to rebuild the subscriptions.
+    setState(() {});
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+  }
+
+  void _openCourse(CourseModel course) {
+    Get.to(() => EnhancedCourseDetailsPage(course: course));
   }
 
   @override
-  void dispose() {
-    _searchController.dispose();
-    _searchFocus.dispose();
-    _animationController.dispose();
-    super.dispose();
-  }
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
 
-  String _getGreeting() {
-    var hour = DateTime.now().hour;
-    if (hour < 12) {
-      return 'Good Morning';
-    }
-    if (hour < 17) {
-      return 'Good Afternoon';
-    }
-    return 'Good Evening';
-  }
-
-  String _getUserName() {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      if (user.displayName != null && user.displayName!.isNotEmpty) {
-        return user.displayName!.split(' ')[0];
-      } else {
-        return 'Student';
-      }
-    }
-    return 'Student';
-  }
-
-  Widget _buildSearchField() {
-    return TextField(
-      controller: _searchController,
-      focusNode: _searchFocus,
-      decoration: InputDecoration(
-        hintText: 'Search for courses...',
-        hintStyle: TextStyle(color: AppTheme.secondaryTextColor),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30),
-          borderSide: BorderSide.none,
+    return Scaffold(
+      key: _scaffoldKey,
+      drawer: const CustomDrawer(),
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: _refresh,
+          child: CustomScrollView(
+            slivers: [
+              SliverAppBar(
+                floating: true,
+                snap: true,
+                backgroundColor: theme.scaffoldBackgroundColor,
+                surfaceTintColor: Colors.transparent,
+                elevation: 0,
+                centerTitle: false,
+                leading: IconButton(
+                  icon: const Icon(Icons.menu_rounded),
+                  onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+                ),
+                title: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(greetingFor(DateTime.now()),
+                        style: theme.textTheme.bodySmall),
+                    Text(
+                      firstNameOf(FirebaseAuth.instance.currentUser?.displayName),
+                      style: theme.textTheme.titleLarge,
+                    ),
+                  ],
+                ),
+                actions: [
+                  IconButton(
+                    tooltip: 'Search courses',
+                    icon: const Icon(Icons.search),
+                    onPressed: () =>
+                        Get.to(() => const CourseSearchPage(autofocus: true)),
+                  ),
+                  IconButton(
+                    tooltip: 'Bookmarks',
+                    icon: const Icon(Icons.bookmark_border),
+                    onPressed: () => Get.to(() => const BookmarksScreen()),
+                  ),
+                ],
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(
+                    AppTheme.spaceMd, 0, AppTheme.spaceMd, AppTheme.spaceLg),
+                sliver: SliverList(
+                  delegate: SliverChildListDelegate([
+                    const _FeaturedBanner(),
+                    const SizedBox(height: AppTheme.spaceLg),
+                    _ContinueLearningSection(
+                      enrollments: _enrollments,
+                      uid: _uid,
+                    ),
+                    _SectionHeader(
+                      title: 'Popular Courses',
+                      onSeeAll: () => Get.to(() => const CourseListPage()),
+                    ),
+                    const SizedBox(height: AppTheme.spaceSm),
+                    _PopularCoursesGrid(
+                      courses: _courses,
+                      onOpen: _openCourse,
+                      onRetry: () => setState(() {}),
+                    ),
+                  ]),
+                ),
+              ),
+            ],
+          ),
         ),
-        filled: true,
-        fillColor: Colors.white,
-        prefixIcon: Icon(Icons.search, color: AppTheme.secondaryTextColor),
-        contentPadding: const EdgeInsets.symmetric(vertical: 0),
       ),
-      style: TextStyle(color: AppTheme.textColor),
-      onSubmitted: (value) {
-        // Implement search functionality
-      },
     );
   }
+}
 
-  Widget _buildFeaturedBanner(BuildContext context) {
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.title, this.onSeeAll});
+
+  final String title;
+  final VoidCallback? onSeeAll;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(title, style: Theme.of(context).textTheme.displaySmall),
+        if (onSeeAll != null)
+          TextButton(onPressed: onSeeAll, child: const Text('See all')),
+      ],
+    );
+  }
+}
+
+class _FeaturedBanner extends StatelessWidget {
+  const _FeaturedBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Container(
-      height: 180,
+      height: 150,
       decoration: BoxDecoration(
         gradient: AppTheme.primaryGradient,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Stack(
+        clipBehavior: Clip.hardEdge,
         children: [
           Positioned(
-            right: -20,
-            bottom: -20,
-            child: CircleAvatar(
-              radius: 90,
-              backgroundColor: Colors.white.withOpacity(0.1),
-            ),
-          ),
-          Positioned(
-            right: 40,
-            bottom: -60,
+            right: -30,
+            bottom: -40,
             child: CircleAvatar(
               radius: 80,
-              backgroundColor: Colors.white.withOpacity(0.1),
+              backgroundColor: Colors.white.withValues(alpha: 0.1),
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(20),
-            child: Row(
+            padding: const EdgeInsets.all(AppTheme.spaceLg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Expanded(
-                  flex: 3,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        "New Collection",
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              color: Colors.white.withOpacity(0.8),
-                            ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        "Start Learning Today",
-                        style: Theme.of(context)
-                            .textTheme
-                            .headlineMedium
-                            ?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                      ),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: () {},
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: AppTheme.primaryColor,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 20, vertical: 12),
-                        ),
-                        child: const Text("Explore Now"),
-                      ),
-                    ],
-                  ),
+                Text(
+                  'Keep learning',
+                  style: theme.textTheme.displaySmall
+                      ?.copyWith(color: Colors.white),
                 ),
-                Expanded(
-                  flex: 2,
-                  child: Image.asset(
-                    'assets/learning.png',
-                    errorBuilder: (context, error, stackTrace) {
-                      return Icon(
-                        Icons.school,
-                        size: 80,
-                        color: Colors.white.withOpacity(0.7),
-                      );
-                    },
-                  ),
+                const SizedBox(height: AppTheme.spaceSm),
+                Text(
+                  'Pick up where you left off, or explore something new.',
+                  style: theme.textTheme.bodyMedium
+                      ?.copyWith(color: Colors.white70),
                 ),
               ],
             ),
@@ -190,521 +199,142 @@ class _MyHomePageState extends State<MyHomePage>
       ),
     );
   }
+}
 
-  Widget _buildSectionHeader(String title, Function() onSeeAll) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          title,
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-        ),
-        TextButton(
-          onPressed: onSeeAll,
-          child: Text(
-            "See All",
-            style: TextStyle(
-              color: AppTheme.primaryColor,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+/// The reader's actual in-progress courses. Hidden entirely when there are
+/// none, rather than showing fabricated placeholder cards.
+class _ContinueLearningSection extends StatelessWidget {
+  const _ContinueLearningSection({required this.enrollments, required this.uid});
 
-  Widget _buildContinueLearningSection() {
-    if (_isLoading) {
-      return _buildLoadingCourseCards();
-    }
-
-    // Placeholder for enrolled courses
-    return SizedBox(
-      height: 200,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: 3,
-        itemBuilder: (context, index) {
-          return Container(
-            margin: const EdgeInsets.only(right: 16),
-            width: 280,
-            decoration: BoxDecoration(
-              gradient: AppTheme.cardGradient,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.1),
-                  spreadRadius: 1,
-                  blurRadius: 10,
-                  offset: const Offset(0, 5),
-                ),
-              ],
-            ),
-            child: Stack(
-              children: [
-                Positioned(
-                  right: 16,
-                  top: 16,
-                  child: CircularProgressIndicator(
-                    value: (index + 1) * 0.25,
-                    backgroundColor: Colors.grey.withOpacity(0.2),
-                    valueColor:
-                        AlwaysStoppedAnimation<Color>(AppTheme.accentColor),
-                    strokeWidth: 6,
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Course ${index + 1}",
-                        style: TextStyle(
-                          color: AppTheme.secondaryTextColor,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        "Flutter Development ${index + 1}",
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                      ),
-                      const SizedBox(height: 16),
-                      LinearProgressIndicator(
-                        value: (index + 1) * 0.25,
-                        backgroundColor: Colors.grey.withOpacity(0.2),
-                        valueColor:
-                            AlwaysStoppedAnimation<Color>(AppTheme.accentColor),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        "${((index + 1) * 25).toString()}% Complete",
-                        style: TextStyle(
-                          color: AppTheme.secondaryTextColor,
-                        ),
-                      ),
-                      const Spacer(),
-                      ElevatedButton(
-                        onPressed: () {
-                          // Navigate to course
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primaryColor,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 24, vertical: 10),
-                        ),
-                        child: const Text("Continue"),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildLoadingCourseCards() {
-    return SizedBox(
-      height: 200,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: 3,
-        itemBuilder: (context, index) {
-          return Container(
-            margin: const EdgeInsets.only(right: 16),
-            width: 280,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Shimmer.fromColors(
-              baseColor: Colors.grey[300]!,
-              highlightColor: Colors.grey[100]!,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 100,
-                      height: 16,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Container(
-                      width: 200,
-                      height: 24,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    const SizedBox(height: 30),
-                    Container(
-                      width: double.infinity,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Container(
-                      width: 80,
-                      height: 16,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    const Spacer(),
-                    Container(
-                      width: 100,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget availableCourses(BuildContext context, int index) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 20),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.03),
-            spreadRadius: 10,
-            blurRadius: 3,
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(20),
-            child: Image.network(
-              onlineCourceOne[index]['img'],
-              fit: BoxFit.cover,
-              width: double.infinity,
-              height: 150,
-              errorBuilder: (context, error, stackTrace) => Container(
-                height: 150,
-                color: AppTheme.dividerColor,
-                child: Icon(
-                  Icons.image_not_supported,
-                  color: AppTheme.secondaryTextColor,
-                  size: 50,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 15),
-          Text(
-            onlineCourceOne[index]['title'],
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-          ),
-          const SizedBox(height: 15),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    Icons.play_circle_filled,
-                    color: AppTheme.primaryColor,
-                    size: 16,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    "${onlineCourceOne[index]['session']} lessons",
-                    style: TextStyle(
-                      color: AppTheme.secondaryTextColor,
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
-              ),
-              Text(
-                "৳${onlineCourceOne[index]['price']}",
-                style: TextStyle(
-                  color: AppTheme.primaryColor,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+  final EnrollmentRepository enrollments;
+  final String uid;
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      key: scaffoldKey,
-      drawer: CustomDrawer(),
-      backgroundColor: AppTheme.backgroundColor,
-      body: SafeArea(
-        child: NestedScrollView(
-          headerSliverBuilder: (context, innerBoxIsScrolled) {
-            return [
-              SliverAppBar(
-                floating: true,
-                snap: true,
-                pinned: false,
-                backgroundColor: AppTheme.backgroundColor,
-                automaticallyImplyLeading: false,
-                title: _isSearching ? _buildSearchField() : null,
-                leading: IconButton(
-                  icon: Icon(Icons.menu, color: AppTheme.textColor),
-                  onPressed: () {
-                    scaffoldKey.currentState?.openDrawer();
-                  },
-                ),
-                actions: [
-                  if (!_isSearching)
-                    IconButton(
-                      icon: Icon(Icons.search, color: AppTheme.textColor),
-                      onPressed: () {
-                        setState(() {
-                          _isSearching = true;
-                        });
-                      },
-                    ),
-                  if (_isSearching)
-                    IconButton(
-                      icon: Icon(Icons.close, color: AppTheme.textColor),
-                      onPressed: () {
-                        setState(() {
-                          _isSearching = false;
-                          _searchController.clear();
-                        });
-                      },
-                    ),
-                ],
-              )
-            ];
-          },
-          body: RefreshIndicator(
-            color: AppTheme.primaryColor,
-            onRefresh: () async {
-              // Refresh data
-              setState(() {
-                _isLoading = true;
-              });
-              await Future.delayed(const Duration(seconds: 1));
-              if (mounted) {
-                setState(() {
-                  _isLoading = false;
-                });
-              }
-            },
-            child: ListView(
-              padding: const EdgeInsets.all(20),
-              children: AnimationConfiguration.toStaggeredList(
-                duration: const Duration(milliseconds: 300),
-                childAnimationBuilder: (widget) => SlideAnimation(
-                  horizontalOffset: 50.0,
-                  child: FadeInAnimation(
-                    child: widget,
-                  ),
-                ),
-                children: [
-                  // Welcome section
-                  if (!_isSearching) ...[
-                    const SizedBox(height: 10),
-                    Text(
-                      "${_getGreeting()},",
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            color: AppTheme.secondaryTextColor,
-                          ),
-                    ),
-                    Text(
-                      _getUserName(),
-                      style:
-                          Theme.of(context).textTheme.displayMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
+    return StreamBuilder<List<Enrollment>>(
+      stream: enrollments.streamEnrollments(uid),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Padding(
+            padding: EdgeInsets.only(bottom: AppTheme.spaceLg),
+            child: AppSkeleton(height: 96, radius: AppTheme.borderRadius),
+          );
+        }
 
-                  // Featured banner
-                  if (!_isSearching) _buildFeaturedBanner(context),
+        final inProgress = (snapshot.data ?? const <Enrollment>[])
+            .where((e) => !e.isComplete)
+            .toList();
+        if (inProgress.isEmpty) return const SizedBox.shrink();
 
-                  // Continue learning section
-                  if (!_isSearching) ...[
-                    const SizedBox(height: 30),
-                    _buildSectionHeader("Continue Learning", () {
-                      // Navigate to enrolled courses
-                    }),
-                    const SizedBox(height: 16),
-                    _buildContinueLearningSection(),
-                  ],
-
-                  // Categories section
-                  const SizedBox(height: 30),
-                  _buildSectionHeader("Categories", () {
-                    // Navigate to categories
-                  }),
-                  const SizedBox(height: 16),
-
-                  // Popular courses section
-                  const SizedBox(height: 30),
-                  _buildSectionHeader("Popular Courses", () {
-                    // Navigate to all courses
-                  }),
-                  const SizedBox(height: 16),
-
-                  // Course grid
-                  GridView.count(
-                    physics: const NeverScrollableScrollPhysics(),
-                    shrinkWrap: true,
-                    crossAxisCount: 2,
-                    childAspectRatio: 0.7,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                    children: List.generate(
-                      onlineCourceOne.length > 6 ? 6 : onlineCourceOne.length,
-                      (index) {
-                        return GestureDetector(
-                          onTap: () {
-                            // Navigate to course details using the enhanced version
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => CoursesDetail(
-                                  imgDetail: onlineCourceOne[index]
-                                      ['img_detail'],
-                                  title: onlineCourceOne[index]['title'],
-                                  price: onlineCourceOne[index]['price'],
-                                ),
-                              ),
-                            );
-                          },
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.grey.withOpacity(0.05),
-                                  spreadRadius: 1,
-                                  blurRadius: 5,
-                                  offset: const Offset(0, 3),
-                                ),
-                              ],
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(
-                                  flex: 3,
-                                  child: ClipRRect(
-                                    borderRadius: const BorderRadius.only(
-                                      topLeft: Radius.circular(16),
-                                      topRight: Radius.circular(16),
-                                    ),
-                                    child: Image.asset(
-                                      onlineCourceOne[index]['img'],
-                                      fit: BoxFit.cover,
-                                      width: double.infinity,
-                                    ),
-                                  ),
-                                ),
-                                Expanded(
-                                  flex: 2,
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(12),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          onlineCourceOne[index]['title'],
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .titleMedium
-                                              ?.copyWith(
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Row(
-                                          children: [
-                                            Icon(
-                                              Icons.play_circle_filled,
-                                              color: AppTheme.primaryColor,
-                                              size: 14,
-                                            ),
-                                            const SizedBox(width: 4),
-                                            Text(
-                                              "${onlineCourceOne[index]['session']} lessons",
-                                              style: TextStyle(
-                                                color:
-                                                    AppTheme.secondaryTextColor,
-                                                fontSize: 12,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        const Spacer(),
-                                        Text(
-                                          "৳${onlineCourceOne[index]['price']}",
-                                          style: TextStyle(
-                                            color: AppTheme.primaryColor,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const _SectionHeader(title: 'Continue Learning'),
+            const SizedBox(height: AppTheme.spaceSm),
+            SizedBox(
+              height: 108,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: inProgress.length,
+                separatorBuilder: (_, __) =>
+                    const SizedBox(width: AppTheme.spaceMd),
+                itemBuilder: (context, index) {
+                  final enrollment = inProgress[index];
+                  return SizedBox(
+                    width: 280,
+                    child: ContinueLearningCard(
+                      enrollment: enrollment,
+                      onTap: () => Get.to(
+                        () => CoursePlayerPage(course: enrollment.course),
+                      ),
                     ),
-                  ),
-                ],
+                  );
+                },
               ),
             ),
+            const SizedBox(height: AppTheme.spaceLg),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _PopularCoursesGrid extends StatelessWidget {
+  const _PopularCoursesGrid({
+    required this.courses,
+    required this.onOpen,
+    required this.onRetry,
+  });
+
+  final CourseRepository courses;
+  final void Function(CourseModel course) onOpen;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return AsyncView<List<CourseModel>>(
+      stream: courses.streamPopularCourses(limit: 8),
+      errorTitle: 'Could not load courses',
+      onRetry: onRetry,
+      loading: const _GridSkeleton(),
+      empty: const AppEmptyState(
+        icon: Icons.auto_stories_outlined,
+        title: 'No courses yet',
+        message: 'Courses will show up here once they are published.',
+      ),
+      builder: (context, data) => AnimationLimiter(
+        child: GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: AppTheme.spaceMd,
+            mainAxisSpacing: AppTheme.spaceMd,
+            childAspectRatio: 0.78,
           ),
+          itemCount: data.length,
+          itemBuilder: (context, index) {
+            final course = data[index];
+            return AnimationConfiguration.staggeredGrid(
+              position: index,
+              columnCount: 2,
+              duration: const Duration(milliseconds: 300),
+              child: ScaleAnimation(
+                scale: 0.95,
+                child: FadeInAnimation(
+                  child: CourseGridCard(
+                    course: course,
+                    onTap: () => onOpen(course),
+                  ),
+                ),
+              ),
+            );
+          },
         ),
+      ),
+    );
+  }
+}
+
+class _GridSkeleton extends StatelessWidget {
+  const _GridSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: AppTheme.spaceMd,
+        mainAxisSpacing: AppTheme.spaceMd,
+        childAspectRatio: 0.78,
+      ),
+      itemCount: 4,
+      itemBuilder: (_, __) => const AppSkeleton(
+        height: double.infinity,
+        radius: AppTheme.borderRadius,
       ),
     );
   }

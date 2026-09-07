@@ -2,16 +2,23 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:online_cource_app/Model/course_model.dart';
 import 'package:online_cource_app/Utils/dialouge_utils.dart';
+import 'package:online_cource_app/data/course_repository.dart';
+import 'package:online_cource_app/data/enrollment_repository.dart';
+import 'package:online_cource_app/data/user_repository.dart';
 
 class AuthController extends GetxController {
-  static AuthController instance = Get.find<AuthController>();
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   final Rx<User?> firebaseUser = Rx<User?>(null);
   final RxBool isLoading = false.obs;
   final RxMap<String, dynamic> userData = RxMap<String, dynamic>({});
+
+  // Enrollment lives in one place; this controller only delegates to it.
+  final EnrollmentRepository _enrollments = EnrollmentRepository();
+  final UserRepository _users = UserRepository();
 
   @override
   void onInit() {
@@ -25,6 +32,10 @@ class AuthController extends GetxController {
     if (user != null) {
       // User is logged in, fetch user data
       await fetchUserData();
+      // Fold any pre-migration enrollment documents into the canonical
+      // collection so existing users keep their courses.
+      await migrateEnrollmentsIfNeeded();
+      await _backfillCourseSearchFields();
     } else {
       // Clear user data when logged out
       userData.clear();
@@ -43,20 +54,15 @@ class AuthController extends GetxController {
           FirebaseAuth.instance.currentUser!
               .updateDisplayName(userData['name'] ?? "Student");
         } else {
-          // Create user document if it doesn't exist
-          await _firestore.collection('users').doc(currentUser!.uid).set({
-            'email': currentUser!.email,
-            'displayName': currentUser!.displayName,
-            'photoURL': currentUser!.photoURL,
-            'createdAt': FieldValue.serverTimestamp(),
-            'lastLogin': FieldValue.serverTimestamp(),
-            'enrolledCourses': [],
-          });
-
-          // Fetch the newly created document
-          final newDoc =
-              await _firestore.collection('users').doc(currentUser!.uid).get();
-          userData.value = newDoc.data() ?? {};
+          // Create the profile document if it is missing. `enrolledCourses` is
+          // a subcollection, not an array field, so it is not seeded here.
+          await _users.ensureUserDocument(
+            uid: currentUser!.uid,
+            email: currentUser!.email,
+            name: currentUser!.displayName,
+            photoUrl: currentUser!.photoURL,
+          );
+          userData.value = await _users.getUser(currentUser!.uid);
         }
       }
     } catch (e) {
@@ -124,34 +130,17 @@ class AuthController extends GetxController {
     }
   }
 
-  // Method to enroll in a course
-  Future<bool> enrollInCourse(String courseId, double price) async {
+  /// Enrolls the signed-in user in [course].
+  ///
+  /// Delegates to [EnrollmentRepository] so this and the enrollment dialog
+  /// write to the same place; they used to use two incompatible schemas.
+  Future<bool> enrollInCourse(CourseModel course) async {
     try {
       isLoading.value = true;
+      if (currentUser == null) return false;
 
-      if (currentUser != null) {
-        // Add course to user's enrolled courses
-        await _firestore
-            .collection('users')
-            .doc(currentUser!.uid)
-            .collection('enrolledCourses')
-            .doc(courseId)
-            .set({
-          'courseId': courseId,
-          'enrolledAt': FieldValue.serverTimestamp(),
-          'progress': 0.0,
-          'lastAccessed': FieldValue.serverTimestamp(),
-          'price': price,
-        });
-
-        // Increment course enrollment count
-        await _firestore.collection('courses').doc(courseId).update({
-          'enrollmentCount': FieldValue.increment(1),
-        });
-
-        return true;
-      }
-      return false;
+      await _enrollments.enroll(uid: currentUser!.uid, course: course);
+      return true;
     } catch (e) {
       debugPrint('Error enrolling in course: $e');
       return false;
@@ -160,59 +149,66 @@ class AuthController extends GetxController {
     }
   }
 
-  // Method to update course progress
-  Future<bool> updateCourseProgress(String courseId, double progress) async {
+  Future<bool> updateCourseProgress(
+    String courseId,
+    double progress, {
+    String? lastLessonId,
+  }) async {
     try {
-      if (currentUser != null) {
-        await _firestore
-            .collection('users')
-            .doc(currentUser!.uid)
-            .collection('enrolledCourses')
-            .doc(courseId)
-            .update({
-          'progress': progress,
-          'lastAccessed': FieldValue.serverTimestamp(),
-        });
-        return true;
-      }
-      return false;
+      if (currentUser == null) return false;
+      await _enrollments.updateProgress(
+        uid: currentUser!.uid,
+        courseId: courseId,
+        progress: progress,
+        lastLessonId: lastLessonId,
+      );
+      return true;
     } catch (e) {
       debugPrint('Error updating course progress: $e');
       return false;
     }
   }
 
-  // Method to check if user is enrolled in a course
   Future<bool> isEnrolledInCourse(String courseId) async {
     try {
-      if (currentUser != null) {
-        final doc = await _firestore
-            .collection('users')
-            .doc(currentUser!.uid)
-            .collection('enrolledCourses')
-            .doc(courseId)
-            .get();
-        return doc.exists;
-      }
-      return false;
+      if (currentUser == null) return false;
+      return await _enrollments.isEnrolled(
+        uid: currentUser!.uid,
+        courseId: courseId,
+      );
     } catch (e) {
       debugPrint('Error checking course enrollment: $e');
       return false;
     }
   }
 
-  // Method to get enrolled courses
-  Stream<QuerySnapshot> getEnrolledCoursesStream() {
-    if (currentUser != null) {
-      return _firestore
-          .collection('users')
-          .doc(currentUser!.uid)
-          .collection('enrolledCourses')
-          .orderBy('lastAccessed', descending: true)
-          .snapshots();
+  /// Enrolled courses with progress, most recently opened first.
+  Stream<List<Enrollment>> getEnrolledCoursesStream() {
+    return _enrollments.streamEnrollments(currentUser?.uid ?? '');
+  }
+
+  /// Indexes any courses that predate search. Best-effort: a failure here
+  /// must never block sign-in, and search still works via its fallback scan.
+  Future<void> _backfillCourseSearchFields() async {
+    try {
+      final updated = await CourseRepository().backfillSearchFields();
+      if (updated > 0) {
+        debugPrint('Indexed $updated course(s) for search');
+      }
+    } catch (e) {
+      debugPrint('Course search backfill skipped: $e');
     }
-    // Return empty snapshot stream when user is null
-    return Stream.empty();
+  }
+
+  /// Folds any pre-migration `enrollment` documents into the canonical
+  /// collection. Runs once per user; safe to call on every launch.
+  Future<void> migrateEnrollmentsIfNeeded() async {
+    if (currentUser == null) return;
+    final migrated =
+        await _enrollments.migrateLegacyEnrollments(currentUser!.uid);
+    if (migrated > 0) {
+      debugPrint('Migrated $migrated legacy enrollment(s)');
+    }
   }
 
   Future<User?> signUpNewUsers(
@@ -231,12 +227,13 @@ class AuthController extends GetxController {
       await _firestore.collection('users').doc(userCredential.user!.uid).set({
         'name': name,
         'email': email,
+        'role': 'student',
         'createdAt': FieldValue.serverTimestamp(),
         'lastLogin': FieldValue.serverTimestamp(),
-        'enrolledCourses': [],
       });
 
       // Auto sign in after sign up
+      if (!context.mounted) return userCredential.user;
       await signInUsers(context, email, password);
       return userCredential.user;
     } on FirebaseAuthException catch (e) {
@@ -254,8 +251,10 @@ class AuthController extends GetxController {
         default:
           errorMessage = 'An error occurred during registration: ${e.message}';
       }
+      if (!context.mounted) return null;
       showErrorDialouge(context, errorMessage);
     } catch (e) {
+      if (!context.mounted) return null;
       showErrorDialouge(context, 'An unexpected error occurred: $e');
     } finally {
       isLoading.value = false;
@@ -273,13 +272,9 @@ class AuthController extends GetxController {
         password: password,
       );
 
-      // Update last login time in Firestore
-      await _firestore
-          .collection('users')
-          .doc(userCredential.user!.uid)
-          .update({
-        'lastLogin': FieldValue.serverTimestamp(),
-      });
+      // A merging set, not an update: an account created outside the app has
+      // no `users/{uid}` document yet, and `update` fails it with `not-found`.
+      await _users.touchLastLogin(userCredential.user!.uid);
 
       return userCredential.user;
     } on FirebaseAuthException catch (e) {
@@ -300,8 +295,10 @@ class AuthController extends GetxController {
         default:
           errorMessage = 'An error occurred during sign in: ${e.message}';
       }
+      if (!context.mounted) return null;
       showErrorDialouge(context, errorMessage);
     } catch (e) {
+      if (!context.mounted) return null;
       showErrorDialouge(context, 'An unexpected error occurred: $e');
     } finally {
       isLoading.value = false;

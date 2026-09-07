@@ -1,17 +1,18 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
+import 'package:online_cource_app/Model/course_model.dart';
+import 'package:online_cource_app/data/course_repository.dart';
 
 class AddCourseScreen extends StatefulWidget {
   const AddCourseScreen({super.key});
 
   @override
-  _AddCourseScreenState createState() => _AddCourseScreenState();
+  State<AddCourseScreen> createState() => _AddCourseScreenState();
 }
 
 class _AddCourseScreenState extends State<AddCourseScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _firestore = FirebaseFirestore.instance;
+  final CourseRepository _repository = CourseRepository();
 
   String _cover = '';
   String _title = '';
@@ -27,17 +28,19 @@ class _AddCourseScreenState extends State<AddCourseScreen> {
         // Show loading indicator
         EasyLoading.show(status: 'Adding course...');
 
-        // Add the course to Firestore
-        await _firestore.collection('courses').add({
-          'cover': _cover,
-          'title': _title,
-          'duration': _duration,
-          'instructor': _instructors,
-        });
+        // Going through the repository keeps the searchable `titleLower`
+        // field and the model's defaults consistent with the rest of the app.
+        await _repository.createCourse(CourseModel(
+          cover: _cover,
+          title: _title,
+          duration: _duration,
+          instructors: _instructors,
+        ));
 
         // Hide loading indicator
         EasyLoading.dismiss();
 
+        if (!mounted) return;
         // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Course added successfully!')),
@@ -52,6 +55,7 @@ class _AddCourseScreenState extends State<AddCourseScreen> {
         // Hide loading indicator
         EasyLoading.dismiss();
 
+        if (!mounted) return;
         // Show error message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to add course: $e')),

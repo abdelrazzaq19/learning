@@ -5,13 +5,15 @@ import 'package:online_cource_app/Courses/alll_courses.dart';
 import 'package:online_cource_app/Courses/enrolled_course.dart';
 import 'package:online_cource_app/Exam/exam_home.dart';
 import 'package:online_cource_app/Home/home_page.dart';
+import 'package:get/get.dart';
+import 'package:online_cource_app/Courses/bookmarks_screen.dart';
+import 'package:online_cource_app/Courses/course_search.dart';
 import 'package:online_cource_app/theme/app_theme.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   final int initialIndex;
 
-  const MainNavigationScreen({Key? key, this.initialIndex = 0})
-      : super(key: key);
+  const MainNavigationScreen({super.key, this.initialIndex = 0});
 
   @override
   State<MainNavigationScreen> createState() => _MainNavigationScreenState();
@@ -25,7 +27,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
 
   final List<Widget> _pages = [
     const MyHomePage(),
-    CourseListPage(),
+    const CourseListPage(),
     const EnrolledCoursesScreen(),
     const ExamHome(),
     const ProfileScreen(),
@@ -93,7 +95,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
           color: Colors.white,
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.2),
+              color: Colors.grey.withValues(alpha: 0.2),
               blurRadius: 10,
               offset: const Offset(0, -2),
             ),
@@ -189,7 +191,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                 borderRadius: BorderRadius.circular(5),
               ),
             ),
-            Text(
+            const Text(
               'Quick Actions',
               style: TextStyle(
                 fontSize: 20,
@@ -203,8 +205,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                 crossAxisCount: 3,
                 children: [
                   _buildGridActionItem(
-                    icon: Icons.search,
-                    label: 'Find Courses',
+                    icon: Icons.grid_view_rounded,
+                    label: 'All Courses',
                     onTap: () {
                       Navigator.pop(context);
                       _changePage(1); // Navigate to Courses tab
@@ -231,15 +233,15 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                     label: 'Bookmarks',
                     onTap: () {
                       Navigator.pop(context);
-                      // Navigate to bookmarks screen
+                      Get.to(() => const BookmarksScreen());
                     },
                   ),
                   _buildGridActionItem(
-                    icon: Icons.downloading,
-                    label: 'Downloads',
+                    icon: Icons.search,
+                    label: 'Search',
                     onTap: () {
                       Navigator.pop(context);
-                      // Navigate to downloads screen
+                      Get.to(() => const CourseSearchPage(autofocus: true));
                     },
                   ),
                   _buildGridActionItem(
@@ -274,7 +276,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
             width: 50,
             height: 50,
             decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withOpacity(0.1),
+              color: AppTheme.primaryColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(16),
             ),
             child: Icon(
@@ -285,7 +287,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
           const SizedBox(height: 8),
           Text(
             label,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 12,
               color: AppTheme.textColor,
             ),

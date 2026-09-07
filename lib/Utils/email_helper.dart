@@ -1,13 +1,28 @@
 import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:mailer/mailer.dart';
 import 'package:mailer/smtp_server.dart';
 
+/// Sends the certificate PDF by email.
+///
+/// Credentials come from the build environment, never from source:
+///
+///   flutter run --dart-define=SMTP_USERNAME=you@gmail.com ///               --dart-define=SMTP_PASSWORD=your-app-password
+///
+/// When they are unset, [isConfigured] is false and sending is skipped — the
+/// caller still has the PDF saved locally.
 class CertificationEmailService {
-  final String username = '@gmail.com';
-  final String password = '';
+  static const String username =
+      String.fromEnvironment('SMTP_USERNAME', defaultValue: '');
+  static const String password =
+      String.fromEnvironment('SMTP_PASSWORD', defaultValue: '');
+
+  static bool get isConfigured => username.isNotEmpty && password.isNotEmpty;
 
   /// Method to send certification email with attached PDF
-  Future<void> sendCertification({
+  /// Returns true when the email was actually sent.
+  Future<bool> sendCertification({
     required String receiverEmail,
     required File pdfFile,
     required String candidateName,
@@ -15,6 +30,14 @@ class CertificationEmailService {
     required String score,
     required String examDate,
   }) async {
+    if (!isConfigured) {
+      debugPrint(
+        'SMTP is not configured; skipping the certificate email. '
+        'Pass --dart-define=SMTP_USERNAME and SMTP_PASSWORD to enable it.',
+      );
+      return false;
+    }
+
     // Configure the SMTP server
     final smtpServer = SmtpServer(
       'smtp.gmail.com',
@@ -26,7 +49,7 @@ class CertificationEmailService {
 
     // Create the email message
     final message = Message()
-      ..from = Address(username, 'PSTU E-Learning')
+      ..from = const Address(username, 'PSTU E-Learning')
       ..recipients.add(receiverEmail)
       ..subject = 'Certification of Achievement - $examName'
       ..html = '''
@@ -58,19 +81,24 @@ class CertificationEmailService {
       message.attachments.add(FileAttachment(pdfFile)
         ..fileName = '${candidateName}_Certification.pdf');
     } catch (e) {
-      print('Failed to attach the PDF file: ${e.toString()}');
-      return;
+      debugPrint('Failed to attach the PDF file: $e');
+      return false;
     }
 
     // Send the email
     try {
       final sendReport = await send(message, smtpServer);
-      print('Certification email sent: $sendReport');
+      debugPrint('Certification email sent: $sendReport');
+      return true;
     } on MailerException catch (e) {
-      print('Certification email not sent. \n${e.toString()}');
-      for (var p in e.problems) {
-        print('Problem: ${p.code}: ${p.msg}');
+      debugPrint('Certification email not sent: $e');
+      for (final problem in e.problems) {
+        debugPrint('Problem: ${problem.code}: ${problem.msg}');
       }
+      return false;
+    } catch (e) {
+      debugPrint('Certification email not sent: $e');
+      return false;
     }
   }
 }

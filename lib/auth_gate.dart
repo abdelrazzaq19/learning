@@ -50,11 +50,11 @@ class AuthGate extends StatelessWidget {
             ),
             const SizedBox(height: 40),
             // Loading indicator
-            CircularProgressIndicator(
+            const CircularProgressIndicator(
               valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
             ),
             const SizedBox(height: 24),
-            Text(
+            const Text(
               'Loading your experience...',
               style: TextStyle(
                 fontSize: 16,
@@ -95,7 +95,7 @@ class AuthGate extends StatelessWidget {
               const SizedBox(height: 16),
               Text(
                 error,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 16,
                   color: AppTheme.secondaryTextColor,
                 ),

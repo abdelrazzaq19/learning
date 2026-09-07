@@ -4,10 +4,15 @@ import 'package:get/get.dart';
 import 'package:online_cource_app/controllers/auth_controller.dart';
 import 'package:online_cource_app/Login/login_page.dart';
 import 'package:online_cource_app/Utils/toast_messages.dart';
+import 'package:online_cource_app/About/certificates_screen.dart';
+import 'package:online_cource_app/Exam/exam_history.dart';
+import 'package:online_cource_app/data/enrollment_repository.dart';
+import 'package:online_cource_app/data/exam_repository.dart';
 import 'package:online_cource_app/theme/app_theme.dart';
+import 'package:online_cource_app/theme/theme_controller.dart';
 
 class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({Key? key}) : super(key: key);
+  const ProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -44,7 +49,7 @@ class ProfileScreen extends StatelessWidget {
                     // Profile image
                     CircleAvatar(
                       radius: 60,
-                      backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+                      backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.1),
                       child: user?.photoURL != null
                           ? ClipRRect(
                               borderRadius: BorderRadius.circular(60),
@@ -151,16 +156,37 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
+  /// Real statistics from Firestore. These used to be the literals 5 / 24 / 3.
   Widget _buildStatsCards() {
-    return Row(
-      children: [
-        _buildStatCard('Courses\nEnrolled', '5', Icons.school_rounded),
-        const SizedBox(width: 16),
-        _buildStatCard('Hours\nSpent', '24', Icons.access_time_rounded),
-        const SizedBox(width: 16),
-        _buildStatCard(
-            'Certificates\nEarned', '3', Icons.workspace_premium_rounded),
-      ],
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+
+    return StreamBuilder<List<Enrollment>>(
+      stream: EnrollmentRepository().streamEnrollments(uid),
+      builder: (context, enrollmentSnapshot) {
+        final enrollments = enrollmentSnapshot.data ?? const <Enrollment>[];
+        final completed = enrollments.where((e) => e.isComplete).length;
+
+        return StreamBuilder<List<Certificate>>(
+          stream: ExamRepository().streamCertificates(uid),
+          builder: (context, certificateSnapshot) {
+            final certificates =
+                certificateSnapshot.data ?? const <Certificate>[];
+
+            return Row(
+              children: [
+                _buildStatCard('Courses\nEnrolled', '${enrollments.length}',
+                    Icons.school_rounded),
+                const SizedBox(width: 16),
+                _buildStatCard(
+                    'Courses\nCompleted', '$completed', Icons.task_alt_rounded),
+                const SizedBox(width: 16),
+                _buildStatCard('Certificates\nEarned', '${certificates.length}',
+                    Icons.workspace_premium_rounded),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
@@ -191,7 +217,7 @@ class ProfileScreen extends StatelessWidget {
               Text(
                 title,
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 12,
                   color: AppTheme.secondaryTextColor,
                 ),
@@ -205,11 +231,33 @@ class ProfileScreen extends StatelessWidget {
 
   Widget _buildAccountOptions(
       BuildContext context, AuthController authController) {
+    final themeController = Get.find<ThemeController>();
+
     return Card(
-      color: Colors.white,
-      elevation: 4,
+      elevation: 2,
       child: Column(
         children: [
+          Obx(() {
+            final mode = themeController.mode.value;
+            final isDark = mode == ThemeMode.system
+                ? MediaQuery.platformBrightnessOf(context) == Brightness.dark
+                : mode == ThemeMode.dark;
+            return SwitchListTile(
+              key: const Key('dark_mode_switch'),
+              secondary: Icon(
+                isDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              title: const Text('Dark Mode'),
+              subtitle: Text(mode == ThemeMode.system
+                  ? 'Following system'
+                  : (isDark ? 'On' : 'Off')),
+              value: isDark,
+              onChanged: (value) =>
+                  themeController.setMode(value ? ThemeMode.dark : ThemeMode.light),
+            );
+          }),
+          const Divider(),
           _buildOptionItem(
             icon: Icons.verified_user_rounded,
             title: 'Account Settings',
@@ -219,11 +267,15 @@ class ProfileScreen extends StatelessWidget {
           ),
           const Divider(),
           _buildOptionItem(
-            icon: Icons.notifications_rounded,
-            title: 'Notifications',
-            onTap: () {
-              // Navigate to notifications settings
-            },
+            icon: Icons.workspace_premium_rounded,
+            title: 'My Certificates',
+            onTap: () => Get.to(() => const CertificatesScreen()),
+          ),
+          const Divider(),
+          _buildOptionItem(
+            icon: Icons.history_edu_rounded,
+            title: 'Exam History',
+            onTap: () => Get.to(() => const ExamHistoryScreen()),
           ),
           const Divider(),
           _buildOptionItem(
@@ -249,9 +301,11 @@ class ProfileScreen extends StatelessWidget {
             onTap: () async {
               try {
                 await authController.signOutUsers();
+                if (!context.mounted) return;
                 showSuccessToast(context, 'Signed out successfully');
                 Get.offAll(() => const LoginPage());
               } catch (e) {
+                if (!context.mounted) return;
                 showErrorToast(context, 'Error signing out. Please try again.');
               }
             },

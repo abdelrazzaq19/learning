@@ -11,7 +11,7 @@ class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
   @override
-  _LoginPageState createState() => _LoginPageState();
+  State<LoginPage> createState() => _LoginPageState();
 }
 
 class _LoginPageState extends State<LoginPage>
@@ -64,6 +64,7 @@ class _LoginPageState extends State<LoginPage>
     try {
       showLoadingDialouge(context, 'Signing in...');
       final user = await auth.signInUsers(context, email, password);
+      if (!mounted) return;
 
       if (user == null) {
         Get.back();
@@ -73,6 +74,7 @@ class _LoginPageState extends State<LoginPage>
         Get.off(() => const MainNavigationScreen());
       }
     } catch (e) {
+      if (!mounted) return;
       Get.back();
       showErrorToast(context, 'Error: ${e.toString()}');
     } finally {
@@ -107,13 +109,13 @@ class _LoginPageState extends State<LoginPage>
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
-                              color: AppTheme.primaryColor.withOpacity(0.2),
+                              color: AppTheme.primaryColor.withValues(alpha: 0.2),
                               blurRadius: 20,
                               offset: const Offset(0, 10),
                             ),
                           ],
                         ),
-                        child: Center(
+                        child: const Center(
                           child: Icon(
                             Icons.school,
                             size: 60,
@@ -144,19 +146,19 @@ class _LoginPageState extends State<LoginPage>
                       decoration: InputDecoration(
                         labelText: 'Email',
                         hintText: 'Enter your email',
-                        prefixIcon: Icon(Icons.email,
+                        prefixIcon: const Icon(Icons.email,
                             color: AppTheme.secondaryTextColor),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
-                          borderSide: BorderSide(color: AppTheme.dividerColor),
+                          borderSide: const BorderSide(color: AppTheme.dividerColor),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
-                          borderSide: BorderSide(color: AppTheme.dividerColor),
+                          borderSide: const BorderSide(color: AppTheme.dividerColor),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
-                          borderSide: BorderSide(color: AppTheme.primaryColor),
+                          borderSide: const BorderSide(color: AppTheme.primaryColor),
                         ),
                         filled: true,
                         fillColor: Colors.white,
@@ -181,7 +183,7 @@ class _LoginPageState extends State<LoginPage>
                       decoration: InputDecoration(
                         labelText: 'Password',
                         hintText: 'Enter your password',
-                        prefixIcon: Icon(Icons.lock,
+                        prefixIcon: const Icon(Icons.lock,
                             color: AppTheme.secondaryTextColor),
                         suffixIcon: IconButton(
                           icon: Icon(
@@ -198,15 +200,15 @@ class _LoginPageState extends State<LoginPage>
                         ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
-                          borderSide: BorderSide(color: AppTheme.dividerColor),
+                          borderSide: const BorderSide(color: AppTheme.dividerColor),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
-                          borderSide: BorderSide(color: AppTheme.dividerColor),
+                          borderSide: const BorderSide(color: AppTheme.dividerColor),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
-                          borderSide: BorderSide(color: AppTheme.primaryColor),
+                          borderSide: const BorderSide(color: AppTheme.primaryColor),
                         ),
                         filled: true,
                         fillColor: Colors.white,
@@ -268,13 +270,13 @@ class _LoginPageState extends State<LoginPage>
                       ),
                     ),
                     const SizedBox(height: 24),
-                    Row(
+                    const Row(
                       children: [
                         Expanded(
                           child: Divider(color: AppTheme.dividerColor),
                         ),
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          padding: EdgeInsets.symmetric(horizontal: 16),
                           child: Text(
                             'OR',
                             style: TextStyle(
@@ -321,7 +323,7 @@ class _LoginPageState extends State<LoginPage>
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(
+                        const Text(
                           "Don't have an account? ",
                           style: TextStyle(
                             color: AppTheme.secondaryTextColor,
@@ -371,7 +373,7 @@ class _LoginPageState extends State<LoginPage>
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
+              color: Colors.grey.withValues(alpha: 0.1),
               blurRadius: 10,
               spreadRadius: 5,
             ),

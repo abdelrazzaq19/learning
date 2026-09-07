@@ -49,22 +49,22 @@ class ExamHome extends StatelessWidget {
                   children: const [
                     ExamTile(
                         name: 'Basic Knowledge',
-                        timne: '30 Seconds',
+                        time: '30 Seconds',
                         question: '3',
                         questionAssetName: 'images/question.json'),
                     ExamTile(
                         name: 'Mobile App Development',
-                        timne: '5 Min',
+                        time: '5 Min',
                         question: '10',
                         questionAssetName: 'images/mobile_app.json'),
                     ExamTile(
                         name: 'Web Development',
-                        timne: '3 Min',
+                        time: '3 Min',
                         question: '5',
                         questionAssetName: 'images/web_dev.json'),
                     ExamTile(
                         name: 'English Spoken',
-                        timne: '9 Min',
+                        time: '9 Min',
                         question: '14',
                         questionAssetName: 'images/english_spoken.json'),
                   ],

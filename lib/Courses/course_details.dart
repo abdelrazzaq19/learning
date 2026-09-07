@@ -145,7 +145,7 @@ class CourseDetailsPage extends StatelessWidget {
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [Colors.black.withOpacity(0.5), Colors.transparent],
+                colors: [Colors.black.withValues(alpha: 0.5), Colors.transparent],
                 begin: Alignment.bottomCenter,
                 end: Alignment.topCenter,
               ),
