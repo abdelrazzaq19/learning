@@ -63,6 +63,8 @@ class _EnhancedCourseDetailsPageState extends State<EnhancedCourseDetailsPage>
 
     final isEnrolled =
         await _authController.isEnrolledInCourse(widget.course.id ?? "");
+    // The reader can leave the screen while this is in flight.
+    if (!mounted) return;
 
     setState(() {
       _isEnrolled = isEnrolled;

@@ -34,8 +34,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           IconButton(
             tooltip: 'Edit profile',
             icon: const Icon(Icons.edit_rounded),
-            onPressed: () => Get.to(() => const EditProfileScreen())
-                ?.then((_) => setState(() {})),
+            onPressed: () =>
+                Get.to(() => const EditProfileScreen())?.then((_) {
+              if (mounted) setState(() {});
+            }),
           ),
         ],
       ),
@@ -93,8 +95,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     // Edit profile button
                     OutlinedButton.icon(
                       onPressed: () {
-                        Get.to(() => const EditProfileScreen())
-                            ?.then((_) => setState(() {}));
+                        Get.to(() => const EditProfileScreen())?.then((_) {
+                          if (mounted) setState(() {});
+                        });
                       },
                       icon: const Icon(Icons.edit_rounded),
                       label: const Text('Edit Profile'),

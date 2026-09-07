@@ -79,9 +79,14 @@ class _LoginPageState extends State<LoginPage>
       Get.back();
       showErrorToast(context, 'Error: ${e.toString()}');
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      // `finally` runs on the success path too, and by then Get.off has
+      // already disposed this screen - so this must be guarded, not just the
+      // try/catch bodies above.
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
